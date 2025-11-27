@@ -229,6 +229,37 @@ cp "$PROJECT_DIR/config/bluetooth-main.conf" /etc/bluetooth/main.conf
 systemctl enable bluetooth
 systemctl start bluetooth
 
+# Install udev rule to unblock Bluetooth on boot
+log_info "Installing udev rule for Bluetooth..."
+cp "$PROJECT_DIR/config/10-bluetooth.rules" /etc/udev/rules.d/
+udevadm control --reload-rules
+
+# Unblock Bluetooth if it's RF-killed
+log_info "Checking Bluetooth rfkill status..."
+if rfkill list bluetooth | grep -q "Soft blocked: yes\|Hard blocked: yes"; then
+    log_warn "Bluetooth is blocked, unblocking..."
+    rfkill unblock bluetooth
+    sleep 1
+fi
+
+# Power on the Bluetooth adapter
+log_info "Powering on Bluetooth adapter..."
+hciconfig hci0 up 2>/dev/null || log_warn "Could not bring up hci0 with hciconfig"
+
+# Wait for adapter to initialize
+sleep 2
+
+# Power on via bluetoothctl
+log_info "Enabling Bluetooth power..."
+bluetoothctl power on 2>/dev/null || log_warn "Could not power on via bluetoothctl"
+
+# Verify Bluetooth is powered on
+if bluetoothctl show | grep -q "Powered: yes"; then
+    log_info "✓ Bluetooth adapter powered on successfully"
+else
+    log_warn "Bluetooth may not be fully powered on, check with: bluetoothctl show"
+fi
+
 log_info "Bluetooth configured successfully"
 
 ###############################################################################

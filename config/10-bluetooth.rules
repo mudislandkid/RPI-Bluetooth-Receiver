@@ -1,0 +1,3 @@
+# Unblock Bluetooth on boot
+# This ensures the Bluetooth adapter is not RF-killed at startup
+ACTION=="add", SUBSYSTEM=="rfkill", ATTR{type}=="bluetooth", ATTR{state}="1"
