@@ -58,11 +58,59 @@ def get_ip_address():
         return '192.168.4.1'
 
 
+def get_bluealsa_control():
+    """Get the BlueALSA software volume control name for connected device"""
+    try:
+        result = subprocess.run(
+            ['amixer', 'scontrols'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        # Look for BlueALSA A2DP control (e.g., "Simple mixer control 'Device A2DP',0")
+        for line in result.stdout.split('\n'):
+            if 'A2DP' in line:
+                # Extract control name between quotes
+                start = line.find("'") + 1
+                end = line.find("'", start)
+                if start > 0 and end > 0:
+                    control_name = line[start:end]
+                    logger.debug(f"Found BlueALSA control: {control_name}")
+                    return control_name
+        return None
+    except Exception as e:
+        logger.error(f"Error getting BlueALSA control: {e}")
+        return None
+
+
 def get_volume():
     """Get current volume level"""
-    # Try multiple mixer controls in order of preference
-    controls = ['Master', 'PCM', 'Speaker', 'Headphone']
+    # First try to get BlueALSA software volume
+    bluealsa_control = get_bluealsa_control()
+    if bluealsa_control:
+        try:
+            result = subprocess.run(
+                ['amixer', 'sget', bluealsa_control],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                # Parse volume from amixer output
+                for line in result.stdout.split('\n'):
+                    if 'Playback' in line and '%' in line:
+                        # Extract percentage
+                        start = line.find('[') + 1
+                        end = line.find('%]')
+                        if start > 0 and end > 0:
+                            volume = int(line[start:end])
+                            logger.info(f"Got volume {volume}% from BlueALSA: {bluealsa_control}")
+                            return volume
+        except Exception as e:
+            logger.debug(f"Could not get volume from BlueALSA control: {e}")
 
+    # Fallback to hardware controls
+    controls = ['Master', 'PCM', 'Speaker', 'Headphone']
     for control in controls:
         try:
             result = subprocess.run(
@@ -92,9 +140,24 @@ def get_volume():
 
 def set_volume(level):
     """Set volume level (0-100)"""
-    # Try multiple mixer controls in order of preference
-    controls = ['Master', 'PCM', 'Speaker', 'Headphone']
+    # First try BlueALSA software volume
+    bluealsa_control = get_bluealsa_control()
+    if bluealsa_control:
+        try:
+            result = subprocess.run(
+                ['amixer', 'sset', bluealsa_control, f'{level}%'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                logger.info(f"Set volume to {level}% on BlueALSA: {bluealsa_control}")
+                return True
+        except Exception as e:
+            logger.debug(f"Could not set volume on BlueALSA control: {e}")
 
+    # Fallback to hardware controls
+    controls = ['Master', 'PCM', 'Speaker', 'Headphone']
     success = False
     for control in controls:
         try:
