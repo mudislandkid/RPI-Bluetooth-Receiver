@@ -1,12 +1,12 @@
 [Unit]
-Description=BluealSA proxy
+Description=BlueALSA proxy
 Requires=bluetooth.service
 After=bluetooth.service
 
 [Service]
 Type=simple
-User=root
-ExecStart=/usr/bin/bluealsa -p a2dp-sink --a2dp-force-audio-cd
+User=bluealsa
+ExecStart=/usr/local/bin/bluealsa -p a2dp-sink
 Restart=on-failure
 RestartSec=5
 

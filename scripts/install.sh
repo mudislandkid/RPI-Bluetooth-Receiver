@@ -56,7 +56,6 @@ log_info "Step 2: Installing required packages..."
 apt-get install -y \
     bluez \
     bluez-tools \
-    bluealsa \
     libbluetooth-dev \
     python3-dbus \
     python3-gi
@@ -64,7 +63,8 @@ apt-get install -y \
 # Audio packages
 apt-get install -y \
     alsa-utils \
-    alsa-base
+    alsa-base \
+    libasound2-dev
 
 # WiFi AP packages
 apt-get install -y \
@@ -81,7 +81,54 @@ apt-get install -y \
     iptables \
     net-tools
 
+# Build tools for BlueALSA
+apt-get install -y \
+    git \
+    automake \
+    build-essential \
+    libtool \
+    pkg-config \
+    libsbc-dev \
+    libdbus-1-dev \
+    libglib2.0-dev
+
 log_info "Packages installed successfully"
+
+###############################################################################
+# Step 2.5: Build and Install BlueALSA from Source
+###############################################################################
+log_info "Step 2.5: Building BlueALSA from source..."
+
+BLUEALSA_DIR="/tmp/bluez-alsa"
+
+# Clone BlueALSA repository
+if [ -d "$BLUEALSA_DIR" ]; then
+    rm -rf "$BLUEALSA_DIR"
+fi
+
+git clone https://github.com/Arkq/bluez-alsa.git "$BLUEALSA_DIR"
+cd "$BLUEALSA_DIR"
+
+# Build and install
+autoreconf --install --force
+mkdir -p build && cd build
+../configure --enable-systemd --with-alsaplugindir=/usr/lib/arm-linux-gnueabihf/alsa-lib
+make
+make install
+
+# Update library cache
+ldconfig
+
+# Create user for bluealsa
+id -u bluealsa &>/dev/null || useradd -r -s /bin/false bluealsa
+
+# Add bluealsa user to audio group
+usermod -a -G audio bluealsa
+
+log_info "BlueALSA built and installed successfully"
+
+# Return to original directory
+cd "$PROJECT_DIR"
 
 ###############################################################################
 # Step 3: Configure Audio

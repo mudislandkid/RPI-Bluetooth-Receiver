@@ -5,9 +5,9 @@ After=bluealsa.service sound.target
 
 [Service]
 Type=simple
-User=root
+User=bluealsa
 ExecStartPre=/bin/sleep 2
-ExecStart=/usr/bin/bluealsa-aplay --pcm=default 00:00:00:00:00:00
+ExecStart=/usr/local/bin/bluealsa-aplay --pcm=plughw:Headphones 00:00:00:00:00:00
 Restart=always
 RestartSec=5
 
