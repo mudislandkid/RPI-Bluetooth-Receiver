@@ -247,6 +247,9 @@ cp "$PROJECT_DIR/services/bluetooth-web.service" /etc/systemd/system/
 # Reload systemd
 systemctl daemon-reload
 
+# Unmask hostapd (must be done before enabling)
+systemctl unmask hostapd
+
 # Enable services
 systemctl enable bluealsa
 systemctl enable bluealsa-aplay
@@ -274,9 +277,6 @@ log_info "Firewall configured"
 # Step 9: Final Configuration
 ###############################################################################
 log_info "Step 9: Final configuration..."
-
-# Unmask hostapd
-systemctl unmask hostapd
 
 log_info "Configuration complete"
 
