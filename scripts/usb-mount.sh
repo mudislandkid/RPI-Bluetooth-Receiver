@@ -7,6 +7,11 @@
 DEVICE=$1
 MOUNT_POINT="/media/usb"
 
+# Ensure filesystem modules are loaded
+modprobe exfat 2>/dev/null || true
+modprobe vfat 2>/dev/null || true
+modprobe ntfs3 2>/dev/null || true
+
 # Create mount point if it doesn't exist
 mkdir -p "$MOUNT_POINT"
 
