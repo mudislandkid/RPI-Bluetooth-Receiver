@@ -153,21 +153,21 @@ if ! make install; then
 fi
 
 # Verify binaries were installed
-if [ ! -f /usr/local/bin/bluealsa ]; then
-    log_error "bluealsa binary not found after installation"
-    log_error "Expected at: /usr/local/bin/bluealsa"
+if [ ! -f /usr/bin/bluealsad ]; then
+    log_error "bluealsad binary not found after installation"
+    log_error "Expected at: /usr/bin/bluealsad"
     exit 1
 fi
 
-if [ ! -f /usr/local/bin/bluealsa-aplay ]; then
+if [ ! -f /usr/bin/bluealsa-aplay ]; then
     log_error "bluealsa-aplay binary not found after installation"
-    log_error "Expected at: /usr/local/bin/bluealsa-aplay"
+    log_error "Expected at: /usr/bin/bluealsa-aplay"
     exit 1
 fi
 
 log_info "BlueALSA binaries installed successfully"
-log_info "  - bluealsa: $(which bluealsa || echo '/usr/local/bin/bluealsa')"
-log_info "  - bluealsa-aplay: $(which bluealsa-aplay || echo '/usr/local/bin/bluealsa-aplay')"
+log_info "  - bluealsad: /usr/bin/bluealsad"
+log_info "  - bluealsa-aplay: /usr/bin/bluealsa-aplay"
 
 # Update library cache
 ldconfig
@@ -336,7 +336,7 @@ systemctl daemon-reload
 # Unmask hostapd (must be done before enabling)
 systemctl unmask hostapd
 
-# Enable services
+# Enable and start services
 systemctl enable bluealsa
 systemctl enable bluealsa-aplay
 systemctl enable bluetooth-agent
@@ -344,7 +344,17 @@ systemctl enable bluetooth-web
 systemctl enable hostapd
 systemctl enable dnsmasq
 
-log_info "Systemd services configured"
+# Restart services to apply any configuration changes
+log_info "Starting services..."
+systemctl restart bluetooth
+systemctl restart bluealsa
+systemctl restart bluealsa-aplay
+systemctl restart bluetooth-agent
+systemctl restart bluetooth-web
+systemctl restart hostapd
+systemctl restart dnsmasq
+
+log_info "Systemd services configured and started"
 
 ###############################################################################
 # Step 8: Configure Firewall (Optional)
