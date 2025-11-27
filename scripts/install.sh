@@ -73,7 +73,8 @@ apt-get install -y \
 # Python packages
 apt-get install -y \
     python3-pip \
-    python3-venv
+    python3-venv \
+    python3-full
 
 # Network tools
 apt-get install -y \
@@ -207,8 +208,14 @@ cp -r "$PROJECT_DIR/web/"* "$INSTALL_DIR/web/"
 # Copy Bluetooth agent
 cp "$PROJECT_DIR/web/bt_agent.py" "$INSTALL_DIR/"
 
-# Install Python dependencies
-pip3 install -r "$INSTALL_DIR/web/requirements.txt"
+# Create Python virtual environment
+log_info "Creating Python virtual environment..."
+python3 -m venv "$INSTALL_DIR/venv"
+
+# Install Python dependencies in virtual environment
+log_info "Installing Python dependencies..."
+"$INSTALL_DIR/venv/bin/pip" install --upgrade pip
+"$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/web/requirements.txt"
 
 # Set permissions
 chmod +x "$INSTALL_DIR/web/app.py"

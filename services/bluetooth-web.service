@@ -8,7 +8,7 @@ Type=simple
 User=root
 WorkingDirectory=/opt/bluetooth-receiver/web
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=/usr/bin/python3 /opt/bluetooth-receiver/web/app.py
+ExecStart=/opt/bluetooth-receiver/venv/bin/python /opt/bluetooth-receiver/web/app.py
 Restart=always
 RestartSec=10
 
