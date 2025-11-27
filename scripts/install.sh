@@ -185,10 +185,27 @@ log_info "Step 5: Configuring WiFi Access Point..."
 systemctl stop hostapd 2>/dev/null || true
 systemctl stop dnsmasq 2>/dev/null || true
 
+# Disconnect wlan0 from any existing WiFi networks
+log_info "Disconnecting wlan0 from existing networks..."
+if command -v nmcli &> /dev/null; then
+    nmcli device disconnect wlan0 2>/dev/null || true
+fi
+
+# Configure NetworkManager to not manage wlan0 (if NetworkManager is installed)
+if systemctl is-active --quiet NetworkManager; then
+    log_info "Configuring NetworkManager to ignore wlan0..."
+    mkdir -p /etc/NetworkManager/conf.d
+    cat > /etc/NetworkManager/conf.d/unmanage-wlan0.conf <<EOF
+[keyfile]
+unmanaged-devices=interface-name:wlan0
+EOF
+    systemctl restart NetworkManager
+    sleep 2
+fi
+
 # Backup original configs
 [ -f /etc/hostapd/hostapd.conf ] && cp /etc/hostapd/hostapd.conf /etc/hostapd/hostapd.conf.backup
 [ -f /etc/dnsmasq.conf ] && cp /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
-[ -f /etc/dhcpcd.conf ] && cp /etc/dhcpcd.conf /etc/dhcpcd.conf.backup
 
 # Copy hostapd configuration
 cp "$PROJECT_DIR/config/hostapd.conf" /etc/hostapd/hostapd.conf
@@ -199,8 +216,34 @@ echo 'DAEMON_CONF="/etc/hostapd/hostapd.conf"' > /etc/default/hostapd
 # Copy dnsmasq configuration
 cp "$PROJECT_DIR/config/dnsmasq.conf" /etc/dnsmasq.conf
 
-# Configure static IP for wlan0
-cat "$PROJECT_DIR/config/dhcpcd.conf.append" >> /etc/dhcpcd.conf
+# Configure static IP using systemd-networkd (works on all modern systems)
+log_info "Configuring static IP for wlan0..."
+mkdir -p /etc/systemd/network
+cat > /etc/systemd/network/10-wlan0.network <<EOF
+[Match]
+Name=wlan0
+
+[Network]
+Address=192.168.4.1/24
+DHCPServer=no
+EOF
+
+# Enable and start systemd-networkd
+systemctl enable systemd-networkd
+systemctl restart systemd-networkd
+
+# Bring down and up wlan0 to apply settings
+ip link set wlan0 down 2>/dev/null || true
+sleep 1
+ip link set wlan0 up
+sleep 2
+
+# Manually set IP if not already set
+if ! ip addr show wlan0 | grep -q "192.168.4.1"; then
+    log_info "Setting static IP manually..."
+    ip addr flush dev wlan0
+    ip addr add 192.168.4.1/24 dev wlan0
+fi
 
 log_info "WiFi AP configured successfully"
 
