@@ -94,7 +94,7 @@ Play music directly from a USB drive:
 
 **USB Drive Requirements:**
 
-- FAT32, exFAT, or ext4 filesystem
+- Supported filesystems: FAT32, exFAT, NTFS, ext4
 - Music files in root directory or folders
 - Supported formats: MP3, FLAC, WAV, M4A, OGG, AAC, WMA
 

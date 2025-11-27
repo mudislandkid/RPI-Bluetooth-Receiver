@@ -114,6 +114,8 @@ Play music directly from a USB drive:
 
 **Supported Formats**: MP3, FLAC, WAV, M4A, OGG, AAC, WMA
 
+**Supported Filesystems**: FAT32, exFAT, NTFS, ext4
+
 **Note**: USB playback automatically pauses Bluetooth audio and resumes when stopped.
 
 ## Project Structure

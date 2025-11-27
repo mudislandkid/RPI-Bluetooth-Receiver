@@ -138,7 +138,10 @@ apt-get install -y \
 # USB Music Player packages
 apt-get install -y \
     mpg123 \
-    ffmpeg
+    ffmpeg \
+    exfat-fuse \
+    exfatprogs \
+    ntfs-3g
 
 # WiFi AP packages
 apt-get install -y \

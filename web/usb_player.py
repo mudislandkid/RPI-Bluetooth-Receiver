@@ -55,6 +55,9 @@ class USBMusicPlayer:
         try:
             for root, dirs, files in os.walk(mount_point):
                 for file in files:
+                    # Skip Mac resource fork files and hidden files
+                    if file.startswith('._') or file.startswith('.'):
+                        continue
                     if Path(file).suffix.lower() in AUDIO_EXTENSIONS:
                         full_path = os.path.join(root, file)
                         music_files.append(full_path)
@@ -105,8 +108,8 @@ class USBMusicPlayer:
             ext = Path(file_path).suffix.lower()
 
             if ext == '.mp3':
-                # Use mpg123 for MP3
-                cmd = ['mpg123', '-q', file_path]
+                # Use mpg123 for MP3 with ALSA output to hardware device
+                cmd = ['mpg123', '-q', '-o', 'alsa', '-a', 'plughw:Headphones', file_path]
             else:
                 # Use ffplay for other formats (from ffmpeg)
                 # -nodisp: no display, -autoexit: exit when done, -loglevel quiet
