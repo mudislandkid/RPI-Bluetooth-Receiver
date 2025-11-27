@@ -109,8 +109,13 @@ if [ -d "$BLUEALSA_DIR" ]; then
     rm -rf "$BLUEALSA_DIR"
 fi
 
-git clone https://github.com/Arkq/bluez-alsa.git "$BLUEALSA_DIR"
-cd "$BLUEALSA_DIR"
+log_info "Cloning BlueALSA repository..."
+if ! git clone https://github.com/Arkq/bluez-alsa.git "$BLUEALSA_DIR"; then
+    log_error "Failed to clone BlueALSA repository"
+    exit 1
+fi
+
+cd "$BLUEALSA_DIR" || exit 1
 
 # Detect system architecture for ALSA plugin directory
 MULTIARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo "arm-linux-gnueabihf")
@@ -120,11 +125,49 @@ log_info "Detected architecture: $MULTIARCH"
 log_info "ALSA plugin directory: $ALSA_PLUGIN_DIR"
 
 # Build and install
-autoreconf --install --force
-mkdir -p build && cd build
-../configure --enable-systemd --with-alsaplugindir="$ALSA_PLUGIN_DIR"
-make
-make install
+log_info "Running autoreconf..."
+if ! autoreconf --install --force; then
+    log_error "autoreconf failed"
+    exit 1
+fi
+
+mkdir -p build
+cd build || exit 1
+
+log_info "Configuring BlueALSA..."
+if ! ../configure --enable-systemd --with-alsaplugindir="$ALSA_PLUGIN_DIR"; then
+    log_error "Configure failed"
+    exit 1
+fi
+
+log_info "Compiling BlueALSA (this may take several minutes)..."
+if ! make; then
+    log_error "Make failed"
+    exit 1
+fi
+
+log_info "Installing BlueALSA..."
+if ! make install; then
+    log_error "Make install failed"
+    exit 1
+fi
+
+# Verify binaries were installed
+if [ ! -f /usr/local/bin/bluealsa ]; then
+    log_error "bluealsa binary not found after installation"
+    log_error "Expected at: /usr/local/bin/bluealsa"
+    exit 1
+fi
+
+if [ ! -f /usr/local/bin/bluealsa-aplay ]; then
+    log_error "bluealsa-aplay binary not found after installation"
+    log_error "Expected at: /usr/local/bin/bluealsa-aplay"
+    exit 1
+fi
+
+log_info "BlueALSA binaries installed successfully"
+log_info "  - bluealsa: $(which bluealsa || echo '/usr/local/bin/bluealsa')"
+log_info "  - bluealsa-aplay: $(which bluealsa-aplay || echo '/usr/local/bin/bluealsa-aplay')"
 
 # Update library cache
 ldconfig
@@ -138,7 +181,7 @@ usermod -a -G audio bluealsa
 log_info "BlueALSA built and installed successfully"
 
 # Return to original directory
-cd "$PROJECT_DIR"
+cd "$PROJECT_DIR" || exit 1
 
 ###############################################################################
 # Step 3: Configure Audio
