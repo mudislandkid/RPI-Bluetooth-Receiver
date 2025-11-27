@@ -41,6 +41,76 @@ log_info "Starting RPI Bluetooth Audio Receiver installation..."
 log_info "Project directory: $PROJECT_DIR"
 
 ###############################################################################
+# Pre-Installation Checks
+###############################################################################
+log_info "Checking for existing installation..."
+
+# Check if BlueALSA is already installed
+BLUEALSA_INSTALLED=false
+if [ -f /usr/bin/bluealsad ]; then
+    BLUEALSA_INSTALLED=true
+    BLUEALSA_VERSION=$(/usr/bin/bluealsad --version 2>&1 | head -n1 || echo "unknown")
+    log_info "✓ BlueALSA found: $BLUEALSA_VERSION"
+fi
+
+# Check if web app is installed
+WEBAPP_INSTALLED=false
+if [ -d "$INSTALL_DIR/web" ]; then
+    WEBAPP_INSTALLED=true
+    log_info "✓ Web application found at $INSTALL_DIR"
+fi
+
+# Check if WiFi is configured
+WIFI_CONFIGURED=false
+if [ -f /etc/hostapd/hostapd.conf ]; then
+    # Check if password has been changed from default
+    if ! grep -q "wpa_passphrase=ChangeThisPassword123!" /etc/hostapd/hostapd.conf; then
+        WIFI_CONFIGURED=true
+        log_info "✓ WiFi AP appears to be configured with custom password"
+    else
+        log_warn "WiFi AP has default password"
+    fi
+fi
+
+# Installation mode flags
+SKIP_BLUEALSA_BUILD=false
+SKIP_WIFI_PASSWORD=false
+UPDATE_MODE=false
+
+# If already installed, ask user what to do
+if [ "$BLUEALSA_INSTALLED" = true ] || [ "$WEBAPP_INSTALLED" = true ]; then
+    UPDATE_MODE=true
+    echo ""
+    log_info "Existing installation detected!"
+    echo ""
+
+    # Ask about BlueALSA rebuild
+    if [ "$BLUEALSA_INSTALLED" = true ]; then
+        read -p "BlueALSA is already installed. Rebuild from source? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            SKIP_BLUEALSA_BUILD=true
+            log_info "→ Skipping BlueALSA rebuild"
+        fi
+    fi
+
+    # Ask about WiFi password
+    if [ "$WIFI_CONFIGURED" = true ]; then
+        read -p "WiFi password appears to be configured. Change it? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            SKIP_WIFI_PASSWORD=true
+            log_info "→ Preserving existing WiFi password"
+        fi
+    fi
+
+    echo ""
+    log_info "Running in UPDATE mode - will refresh configurations and services"
+    echo ""
+    sleep 2
+fi
+
+###############################################################################
 # Step 1: System Update
 ###############################################################################
 log_info "Step 1: Updating system packages..."
@@ -100,11 +170,15 @@ log_info "Packages installed successfully"
 ###############################################################################
 # Step 2.5: Build and Install BlueALSA from Source
 ###############################################################################
-log_info "Step 2.5: Building BlueALSA from source..."
 
-BLUEALSA_DIR="/tmp/bluez-alsa"
+if [ "$SKIP_BLUEALSA_BUILD" = true ]; then
+    log_info "Step 2.5: Skipping BlueALSA build (already installed)"
+else
+    log_info "Step 2.5: Building BlueALSA from source..."
 
-# Clone BlueALSA repository
+    BLUEALSA_DIR="/tmp/bluez-alsa"
+
+    # Clone BlueALSA repository
 if [ -d "$BLUEALSA_DIR" ]; then
     rm -rf "$BLUEALSA_DIR"
 fi
@@ -165,14 +239,18 @@ if [ ! -f /usr/bin/bluealsa-aplay ]; then
     exit 1
 fi
 
-log_info "BlueALSA binaries installed successfully"
-log_info "  - bluealsad: /usr/bin/bluealsad"
-log_info "  - bluealsa-aplay: /usr/bin/bluealsa-aplay"
+    log_info "BlueALSA binaries installed successfully"
+    log_info "  - bluealsad: /usr/bin/bluealsad"
+    log_info "  - bluealsa-aplay: /usr/bin/bluealsa-aplay"
 
-# Update library cache
-ldconfig
+    # Update library cache
+    ldconfig
 
-# Create user for bluealsa
+    # Return to original directory
+    cd "$PROJECT_DIR" || exit 1
+fi
+
+# Create user for bluealsa (always ensure user exists)
 id -u bluealsa &>/dev/null || useradd -r -s /bin/false bluealsa
 
 # Add bluealsa user to audio group
@@ -190,10 +268,7 @@ cp "$PROJECT_DIR/config/bluealsa-dbus.conf" /etc/dbus-1/system.d/
 # Reload D-Bus configuration
 systemctl reload dbus 2>/dev/null || systemctl restart dbus
 
-log_info "BlueALSA built and installed successfully"
-
-# Return to original directory
-cd "$PROJECT_DIR" || exit 1
+log_info "BlueALSA configuration complete"
 
 ###############################################################################
 # Step 3: Configure Audio
@@ -294,7 +369,19 @@ fi
 [ -f /etc/dnsmasq.conf ] && cp /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
 
 # Copy hostapd configuration
-cp "$PROJECT_DIR/config/hostapd.conf" /etc/hostapd/hostapd.conf
+if [ "$SKIP_WIFI_PASSWORD" = true ] && [ -f /etc/hostapd/hostapd.conf.backup ]; then
+    # Preserve existing WiFi password
+    log_info "Preserving existing WiFi password..."
+    EXISTING_PASSWORD=$(grep "^wpa_passphrase=" /etc/hostapd/hostapd.conf.backup | cut -d'=' -f2)
+    cp "$PROJECT_DIR/config/hostapd.conf" /etc/hostapd/hostapd.conf
+    if [ -n "$EXISTING_PASSWORD" ]; then
+        sed -i "s/^wpa_passphrase=.*/wpa_passphrase=$EXISTING_PASSWORD/" /etc/hostapd/hostapd.conf
+        log_info "✓ WiFi password preserved"
+    fi
+else
+    cp "$PROJECT_DIR/config/hostapd.conf" /etc/hostapd/hostapd.conf
+    log_warn "Using default WiFi password - CHANGE THIS AFTER INSTALLATION!"
+fi
 
 # Update hostapd default file
 echo 'DAEMON_CONF="/etc/hostapd/hostapd.conf"' > /etc/default/hostapd
