@@ -1,0 +1,15 @@
+[Unit]
+Description=Bluetooth Pairing Agent
+Requires=bluetooth.service
+After=bluetooth.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/bluetooth-receiver
+ExecStart=/usr/bin/python3 /opt/bluetooth-receiver/bt_agent.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

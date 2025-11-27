@@ -1,0 +1,6 @@
+# Static IP configuration for wlan0
+# This content should be appended to /etc/dhcpcd.conf
+
+interface wlan0
+    static ip_address=192.168.4.1/24
+    nohook wpa_supplicant

@@ -1,0 +1,16 @@
+[Unit]
+Description=Bluetooth Receiver Web Interface
+After=network.target bluetooth.service bluealsa.service
+Wants=bluetooth.service bluealsa.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/bluetooth-receiver/web
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/usr/bin/python3 /opt/bluetooth-receiver/web/app.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

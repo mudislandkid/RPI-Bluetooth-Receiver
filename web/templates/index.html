@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPI Bluetooth Audio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Bluetooth Audio Receiver</h1>
+            <p class="subtitle">Raspberry Pi Audio System</p>
+        </header>
+
+        <!-- Status Section -->
+        <section class="card status-card">
+            <h2>Status</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-label">Adapter:</span>
+                    <span class="status-value" id="adapter-status">Loading...</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Discoverable:</span>
+                    <span class="status-value" id="discoverable-status">No</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Connected Device:</span>
+                    <span class="status-value" id="connected-device">None</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">IP Address:</span>
+                    <span class="status-value" id="ip-address">192.168.4.1</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls Section -->
+        <section class="card controls-card">
+            <h2>Controls</h2>
+
+            <div class="control-group">
+                <button id="toggle-discoverable" class="btn btn-primary">
+                    Make Discoverable
+                </button>
+                <p class="help-text">Enable to allow new devices to find and pair with this receiver</p>
+            </div>
+
+            <div class="control-group">
+                <label for="volume-slider">Volume</label>
+                <div class="volume-control">
+                    <input type="range" id="volume-slider" min="0" max="100" value="50">
+                    <span id="volume-value">50%</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <button id="refresh-btn" class="btn btn-secondary">
+                    Refresh Status
+                </button>
+            </div>
+        </section>
+
+        <!-- Paired Devices Section -->
+        <section class="card devices-card">
+            <h2>Paired Devices</h2>
+            <div id="devices-list">
+                <p class="loading">Loading devices...</p>
+            </div>
+        </section>
+
+        <!-- Instructions Section -->
+        <section class="card instructions-card">
+            <h2>How to Connect</h2>
+            <ol class="instructions">
+                <li>Click "Make Discoverable" above</li>
+                <li>On your phone/tablet: Go to Settings → Bluetooth</li>
+                <li>Search for devices and select "RPI-Bluetooth-Audio"</li>
+                <li>Pair and connect (no PIN required)</li>
+                <li>Play music from your device</li>
+            </ol>
+        </section>
+
+        <footer>
+            <p>RPI Bluetooth Audio Receiver v1.0</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
