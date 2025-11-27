@@ -60,39 +60,62 @@ def get_ip_address():
 
 def get_volume():
     """Get current volume level"""
-    try:
-        result = subprocess.run(
-            ['amixer', 'sget', 'PCM'],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        # Parse volume from amixer output
-        for line in result.stdout.split('\n'):
-            if 'Playback' in line and '%' in line:
-                # Extract percentage
-                start = line.find('[') + 1
-                end = line.find('%]')
-                if start > 0 and end > 0:
-                    return int(line[start:end])
-        return 50  # Default
-    except Exception as e:
-        logger.error(f"Error getting volume: {e}")
-        return 50
+    # Try multiple mixer controls in order of preference
+    controls = ['Master', 'PCM', 'Speaker', 'Headphone']
+
+    for control in controls:
+        try:
+            result = subprocess.run(
+                ['amixer', 'sget', control],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                # Parse volume from amixer output
+                for line in result.stdout.split('\n'):
+                    if 'Playback' in line and '%' in line:
+                        # Extract percentage
+                        start = line.find('[') + 1
+                        end = line.find('%]')
+                        if start > 0 and end > 0:
+                            volume = int(line[start:end])
+                            logger.debug(f"Got volume {volume}% from {control}")
+                            return volume
+        except Exception as e:
+            logger.debug(f"Could not get volume from {control}: {e}")
+            continue
+
+    logger.warning("Could not get volume from any mixer control")
+    return 50  # Default
 
 
 def set_volume(level):
     """Set volume level (0-100)"""
-    try:
-        subprocess.run(
-            ['amixer', 'sset', 'PCM', f'{level}%'],
-            timeout=5,
-            check=True
-        )
-        return True
-    except Exception as e:
-        logger.error(f"Error setting volume: {e}")
-        return False
+    # Try multiple mixer controls in order of preference
+    controls = ['Master', 'PCM', 'Speaker', 'Headphone']
+
+    success = False
+    for control in controls:
+        try:
+            result = subprocess.run(
+                ['amixer', 'sset', control, f'{level}%'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                logger.info(f"Set volume to {level}% on {control}")
+                success = True
+                # Don't break - set volume on all available controls
+        except Exception as e:
+            logger.debug(f"Could not set volume on {control}: {e}")
+            continue
+
+    if not success:
+        logger.error("Could not set volume on any mixer control")
+
+    return success
 
 
 # Routes
