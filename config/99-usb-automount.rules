@@ -1,0 +1,6 @@
+# Udev rules for USB drive auto-mounting
+# This file should be placed at /etc/udev/rules.d/99-usb-automount.rules
+
+# Auto-mount USB storage devices
+ACTION=="add", KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", RUN+="/usr/local/bin/usb-mount.sh %k"
+ACTION=="remove", KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", RUN+="/usr/local/bin/usb-unmount.sh %k"
