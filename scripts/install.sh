@@ -112,10 +112,17 @@ fi
 git clone https://github.com/Arkq/bluez-alsa.git "$BLUEALSA_DIR"
 cd "$BLUEALSA_DIR"
 
+# Detect system architecture for ALSA plugin directory
+MULTIARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo "arm-linux-gnueabihf")
+ALSA_PLUGIN_DIR="/usr/lib/${MULTIARCH}/alsa-lib"
+
+log_info "Detected architecture: $MULTIARCH"
+log_info "ALSA plugin directory: $ALSA_PLUGIN_DIR"
+
 # Build and install
 autoreconf --install --force
 mkdir -p build && cd build
-../configure --enable-systemd --with-alsaplugindir=/usr/lib/arm-linux-gnueabihf/alsa-lib
+../configure --enable-systemd --with-alsaplugindir="$ALSA_PLUGIN_DIR"
 make
 make install
 
