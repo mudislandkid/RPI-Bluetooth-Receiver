@@ -5,12 +5,14 @@ Transform your Raspberry Pi 4B into a headless Bluetooth audio receiver with a w
 ## Features
 
 - **Bluetooth A2DP Audio Sink**: Accept high-quality audio streams from mobile devices
+- **USB Music Player**: Play music directly from USB drives with auto-detection
 - **WiFi Access Point**: Headless management via WiFi hotspot
 - **Web Interface**: User-friendly control panel accessible from any browser
 - **Auto-Pairing**: Automatic device pairing with no PIN required
 - **Auto-Reconnect**: Previously paired devices reconnect automatically
 - **Volume Control**: Adjust volume from the web interface
 - **Device Management**: View, remove, and manage paired devices
+- **Multi-Format Support**: Plays MP3, FLAC, WAV, M4A, OGG, AAC, WMA from USB
 - **Boot-Ready**: All services start automatically on boot
 
 ## Hardware Requirements
@@ -100,6 +102,20 @@ Once paired, your device will automatically reconnect when in range. Simply:
 2. Start playing music
 3. Audio plays through the Raspberry Pi's 3.5mm jack
 
+### USB Music Playback
+
+Play music directly from a USB drive:
+
+1. Insert USB drive with music files
+2. Wait a few seconds for auto-detection
+3. In web interface, click **"Play USB Music"**
+4. Use Previous/Next buttons to navigate tracks
+5. Click **"Stop"** to return to Bluetooth mode
+
+**Supported Formats**: MP3, FLAC, WAV, M4A, OGG, AAC, WMA
+
+**Note**: USB playback automatically pauses Bluetooth audio and resumes when stopped.
+
 ## Project Structure
 
 ```
@@ -109,16 +125,19 @@ rpi-bluetooth/
 │   ├── dnsmasq.conf            # DHCP/DNS configuration
 │   ├── dhcpcd.conf.append      # Static IP configuration
 │   ├── bluetooth-main.conf     # Bluetooth configuration
-│   └── asound.conf             # ALSA audio configuration
+│   ├── asound.conf             # ALSA audio configuration
+│   └── 99-usb-automount.rules  # USB auto-mount udev rules
 ├── services/                    # Systemd service files
 │   ├── bluealsa.service        # BlueALSA service
 │   ├── bluealsa-aplay.service  # Audio playback service
 │   ├── bluetooth-agent.service # Auto-pairing agent
-│   └── bluetooth-web.service   # Web interface service
+│   ├── bluetooth-web.service   # Web interface service
+│   └── usb-player.service      # USB music player service
 ├── web/                         # Web application
 │   ├── app.py                  # Flask application
 │   ├── bluetooth_manager.py    # D-Bus Bluetooth interface
 │   ├── bt_agent.py             # Bluetooth pairing agent
+│   ├── usb_player.py           # USB music player
 │   ├── requirements.txt        # Python dependencies
 │   ├── static/
 │   │   ├── css/style.css       # Styles
@@ -128,7 +147,9 @@ rpi-bluetooth/
 ├── scripts/                     # Installation and utility scripts
 │   ├── install.sh              # Main installation script
 │   ├── set-wifi-password.sh    # WiFi password configuration
-│   └── status.sh               # System status checker
+│   ├── status.sh               # System status checker
+│   ├── usb-mount.sh            # USB auto-mount script
+│   └── usb-unmount.sh          # USB auto-unmount script
 ├── prd.md                       # Product Requirements Document
 └── README.md                    # This file
 ```
@@ -150,6 +171,7 @@ sudo systemctl restart bluetooth
 sudo systemctl restart bluealsa
 sudo systemctl restart bluealsa-aplay
 sudo systemctl restart bluetooth-web
+sudo systemctl restart usb-player
 sudo systemctl restart hostapd
 ```
 
@@ -164,6 +186,9 @@ journalctl -u bluealsa -f
 
 # Web interface logs
 journalctl -u bluetooth-web -f
+
+# USB player logs
+journalctl -u usb-player -f
 
 # WiFi AP logs
 journalctl -u hostapd -f
@@ -339,6 +364,42 @@ interface wlan0
    sudo systemctl enable dnsmasq
    sudo systemctl enable bluetooth-web
    sudo systemctl enable bluetooth-agent
+   sudo systemctl enable usb-player
+   ```
+
+### USB Drive Not Detected
+
+1. Check if USB is mounted:
+
+   ```bash
+   ls -la /media/usb
+   mount | grep usb
+   ```
+
+2. Check USB player service:
+
+   ```bash
+   sudo systemctl status usb-player
+   sudo journalctl -u usb-player -n 50
+   ```
+
+3. Manually mount USB drive:
+
+   ```bash
+   sudo mkdir -p /media/usb
+   sudo mount /dev/sda1 /media/usb
+   ```
+
+4. Check for music files:
+
+   ```bash
+   find /media/usb -type f \( -iname "*.mp3" -o -iname "*.flac" -o -iname "*.wav" \)
+   ```
+
+5. Restart USB player:
+
+   ```bash
+   sudo systemctl restart usb-player
    ```
 
 ## API Reference
@@ -390,6 +451,46 @@ Content-Type: application/json
 }
 ```
 
+### USB Player Status
+
+```http
+GET /api/usb/status
+```
+
+Returns USB player status, current track, and playlist information.
+
+### Play USB Music
+
+```http
+POST /api/usb/play
+```
+
+Start USB music playback.
+
+### Stop USB Music
+
+```http
+POST /api/usb/stop
+```
+
+Stop USB playback and return to Bluetooth mode.
+
+### Next Track
+
+```http
+POST /api/usb/next
+```
+
+Skip to next track in playlist.
+
+### Previous Track
+
+```http
+POST /api/usb/previous
+```
+
+Go to previous track in playlist.
+
 ## Security Considerations
 
 1. **Change Default WiFi Password**: Always change the default password before deployment
@@ -428,6 +529,13 @@ For issues and questions:
 - Open an issue on GitHub
 
 ## Version History
+
+- **v1.1.0** - USB Music Player
+  - USB music playback with auto-detection
+  - Support for MP3, FLAC, WAV, M4A, OGG, AAC, WMA
+  - Sequential playback with loop
+  - Web interface controls for USB player
+  - Auto-pause Bluetooth during USB playback
 
 - **v1.0.0** - Initial release
   - Bluetooth A2DP audio reception

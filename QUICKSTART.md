@@ -73,6 +73,31 @@ sudo reboot
 
 Just start playing music on your phone - it will automatically stream to the Raspberry Pi!
 
+### USB Music Player
+
+Play music directly from a USB drive:
+
+1. **Insert USB drive** with music files (MP3, FLAC, WAV, M4A, OGG, AAC)
+2. Wait a few seconds for auto-detection
+3. In the web interface:
+   - See USB status and track info
+   - Click **"Play USB Music"** to start
+   - Use **Previous/Next** buttons to navigate
+   - Click **"Stop"** to return to Bluetooth mode
+
+**Features:**
+
+- Auto-play when USB inserted (optional)
+- Sequential playback with loop
+- Automatically pauses Bluetooth audio
+- Supports all popular audio formats
+
+**USB Drive Requirements:**
+
+- FAT32, exFAT, or ext4 filesystem
+- Music files in root directory or folders
+- Supported formats: MP3, FLAC, WAV, M4A, OGG, AAC, WMA
+
 ## Troubleshooting
 
 ### Can't see the WiFi network?
@@ -102,6 +127,32 @@ sudo systemctl restart hostapd
 sudo systemctl status bluetooth-web
 sudo systemctl restart bluetooth-web
 ```
+
+### USB drive not detected?
+
+1. Check if USB is mounted:
+   ```bash
+   ls -la /media/usb
+   ```
+
+2. Check USB player service:
+   ```bash
+   sudo systemctl status usb-player
+   sudo journalctl -u usb-player -f
+   ```
+
+3. Manually mount USB:
+
+   ```bash
+   sudo mkdir -p /media/usb
+   sudo mount /dev/sda1 /media/usb
+   ```
+
+4. Restart USB player service:
+
+   ```bash
+   sudo systemctl restart usb-player
+   ```
 
 ## Next Steps
 

@@ -135,6 +135,11 @@ apt-get install -y \
     alsa-utils \
     libasound2-dev
 
+# USB Music Player packages
+apt-get install -y \
+    mpg123 \
+    ffmpeg
+
 # WiFi AP packages
 apt-get install -y \
     hostapd \
@@ -450,6 +455,38 @@ chmod +x "$INSTALL_DIR/bt_agent.py"
 log_info "Web application installed"
 
 ###############################################################################
+# Step 6.5: Install USB Music Player
+###############################################################################
+log_info "Step 6.5: Installing USB music player..."
+
+# Install USB mount/unmount scripts
+log_info "Installing USB auto-mount scripts..."
+cp "$PROJECT_DIR/scripts/usb-mount.sh" /usr/local/bin/
+cp "$PROJECT_DIR/scripts/usb-unmount.sh" /usr/local/bin/
+chmod +x /usr/local/bin/usb-mount.sh
+chmod +x /usr/local/bin/usb-unmount.sh
+
+# Install udev rules for USB auto-mounting
+log_info "Installing udev rules for USB auto-mount..."
+cp "$PROJECT_DIR/config/99-usb-automount.rules" /etc/udev/rules.d/
+udevadm control --reload-rules
+
+# Copy USB player script
+log_info "Installing USB player service script..."
+cp "$PROJECT_DIR/web/usb_player.py" "$INSTALL_DIR/"
+chmod +x "$INSTALL_DIR/usb_player.py"
+
+# Create USB mount point
+mkdir -p /media/usb
+chmod 755 /media/usb
+
+# Create state directory for USB player
+mkdir -p /var/lib/bluetooth-receiver
+chmod 755 /var/lib/bluetooth-receiver
+
+log_info "USB music player installed"
+
+###############################################################################
 # Step 7: Install Systemd Services
 ###############################################################################
 log_info "Step 7: Installing systemd services..."
@@ -459,6 +496,7 @@ cp "$PROJECT_DIR/services/bluealsa.service" /etc/systemd/system/
 cp "$PROJECT_DIR/services/bluealsa-aplay.service" /etc/systemd/system/
 cp "$PROJECT_DIR/services/bluetooth-agent.service" /etc/systemd/system/
 cp "$PROJECT_DIR/services/bluetooth-web.service" /etc/systemd/system/
+cp "$PROJECT_DIR/services/usb-player.service" /etc/systemd/system/
 
 # Reload systemd
 systemctl daemon-reload
@@ -471,6 +509,7 @@ systemctl enable bluealsa
 systemctl enable bluealsa-aplay
 systemctl enable bluetooth-agent
 systemctl enable bluetooth-web
+systemctl enable usb-player
 systemctl enable hostapd
 systemctl enable dnsmasq
 
@@ -481,6 +520,7 @@ systemctl restart bluealsa
 systemctl restart bluealsa-aplay
 systemctl restart bluetooth-agent
 systemctl restart bluetooth-web
+systemctl restart usb-player
 systemctl restart hostapd
 systemctl restart dnsmasq
 
@@ -525,5 +565,10 @@ log_info "  sudo reboot"
 echo ""
 log_info "After reboot, connect to WiFi network 'RPI-Bluetooth-Audio'"
 log_info "and access the web interface at: http://192.168.4.1"
+echo ""
+log_info "Features:"
+log_info "  • Bluetooth Audio Receiver (A2DP)"
+log_info "  • USB Music Player (auto-play when USB inserted)"
+log_info "  • Web-based volume control and device management"
 echo ""
 log_info "=========================================="
