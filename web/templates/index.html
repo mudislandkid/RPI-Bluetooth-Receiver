@@ -62,6 +62,34 @@
             </div>
         </section>
 
+        <!-- USB Music Player Section -->
+        <section class="card usb-player-card">
+            <h2>USB Music Player</h2>
+            <div id="usb-status" class="status-item">
+                <span class="status-label">USB Status:</span>
+                <span id="usb-status-value" class="status-value">Not Detected</span>
+            </div>
+            <div id="usb-current-track" class="status-item" style="display: none;">
+                <span class="status-label">Now Playing:</span>
+                <span id="usb-track-name" class="status-value">-</span>
+            </div>
+            <div id="usb-track-info" class="status-item" style="display: none;">
+                <span class="status-label">Track:</span>
+                <span id="usb-track-number" class="status-value">- / -</span>
+            </div>
+            <div class="control-group usb-controls" id="usb-controls" style="display: none;">
+                <button id="usb-prev-btn" class="btn btn-secondary">⏮ Previous</button>
+                <button id="usb-stop-btn" class="btn btn-danger">⏹ Stop</button>
+                <button id="usb-next-btn" class="btn btn-secondary">⏭ Next</button>
+            </div>
+            <div class="control-group" id="usb-play-group">
+                <button id="usb-play-btn" class="btn btn-primary" disabled>
+                    ▶ Play USB Music
+                </button>
+            </div>
+            <p class="usb-hint">Insert a USB drive with music files to enable playback</p>
+        </section>
+
         <!-- Paired Devices Section -->
         <section class="card devices-card">
             <h2>Paired Devices</h2>

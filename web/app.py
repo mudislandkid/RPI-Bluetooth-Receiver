@@ -10,6 +10,7 @@ import logging
 import subprocess
 import socket
 from bluetooth_manager import BluetoothManager
+import usb_player
 
 # Configure logging
 logging.basicConfig(
@@ -24,6 +25,9 @@ CORS(app)
 
 # Initialize Bluetooth manager
 bt_manager = BluetoothManager()
+
+# Initialize USB music player
+usb_music_player = usb_player.USBMusicPlayer()
 
 
 # Helper functions
@@ -343,6 +347,102 @@ def restart_services():
 
 
 # Error handlers
+###############################################################################
+# USB Music Player API Endpoints
+###############################################################################
+
+@app.route('/api/usb/status', methods=['GET'])
+def usb_status():
+    """Get USB player status"""
+    try:
+        status = usb_music_player.get_status()
+        return jsonify({
+            'success': True,
+            **status
+        })
+    except Exception as e:
+        logger.error(f"Error getting USB status: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/usb/play', methods=['POST'])
+def usb_play():
+    """Start USB playback"""
+    try:
+        success = usb_music_player.start_playback()
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'USB playback started'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No USB drive or music files found'
+            })
+    except Exception as e:
+        logger.error(f"Error starting USB playback: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/usb/stop', methods=['POST'])
+def usb_stop():
+    """Stop USB playback"""
+    try:
+        usb_music_player.stop_playback()
+        return jsonify({
+            'success': True,
+            'message': 'USB playback stopped'
+        })
+    except Exception as e:
+        logger.error(f"Error stopping USB playback: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/usb/next', methods=['POST'])
+def usb_next():
+    """Skip to next track"""
+    try:
+        success = usb_music_player.next_track()
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Skipped to next track'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Not currently playing'
+            })
+    except Exception as e:
+        logger.error(f"Error skipping track: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/usb/previous', methods=['POST'])
+def usb_previous():
+    """Go to previous track"""
+    try:
+        success = usb_music_player.previous_track()
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Went to previous track'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Not currently playing'
+            })
+    except Exception as e:
+        logger.error(f"Error going to previous track: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+###############################################################################
+# Error Handlers
+###############################################################################
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'success': False, 'error': 'Not found'}), 404
