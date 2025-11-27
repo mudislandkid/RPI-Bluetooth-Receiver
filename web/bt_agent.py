@@ -28,7 +28,17 @@ class AutoPairAgent(dbus.service.Object):
 
     def __init__(self, bus, path):
         super().__init__(bus, path)
+        self.bus = bus
+        self.recently_paired = set()
         logger.info("Bluetooth Auto-Pair Agent initialized")
+
+        # Listen for device property changes to detect successful connections
+        self.bus.add_signal_receiver(
+            self.on_device_property_changed,
+            signal_name="PropertiesChanged",
+            dbus_interface="org.freedesktop.DBus.Properties",
+            path_keyword="path"
+        )
 
     @dbus.service.method(AGENT_INTERFACE, in_signature="", out_signature="")
     def Release(self):
@@ -79,6 +89,45 @@ class AutoPairAgent(dbus.service.Object):
     def Cancel(self):
         """Cancel any outstanding pairing request"""
         logger.info("Pairing cancelled")
+
+    def on_device_property_changed(self, interface, changed, invalidated, path):
+        """Handle device property changes to detect successful pairing/connection"""
+        try:
+            # Check if this is a device interface and if Connected property changed
+            if interface == "org.bluez.Device1" and "Connected" in changed:
+                if changed["Connected"]:
+                    device_path = path
+                    logger.info(f"Device connected: {device_path}")
+
+                    # Check if device was recently paired
+                    device_obj = self.bus.get_object(SERVICE_NAME, device_path)
+                    device_props = dbus.Interface(device_obj, "org.freedesktop.DBus.Properties")
+
+                    try:
+                        paired = device_props.Get("org.bluez.Device1", "Paired")
+                        if paired:
+                            logger.info(f"Device is paired and connected - disabling discoverable mode")
+                            self.disable_discoverable()
+                    except Exception as e:
+                        logger.debug(f"Could not check paired status: {e}")
+
+        except Exception as e:
+            logger.debug(f"Error handling property change: {e}")
+
+    def disable_discoverable(self):
+        """Disable discoverable mode on the Bluetooth adapter"""
+        try:
+            # Get adapter object
+            adapter_path = "/org/bluez/hci0"
+            adapter_obj = self.bus.get_object(SERVICE_NAME, adapter_path)
+            adapter_props = dbus.Interface(adapter_obj, "org.freedesktop.DBus.Properties")
+
+            # Set Discoverable to false
+            adapter_props.Set("org.bluez.Adapter1", "Discoverable", dbus.Boolean(False))
+            logger.info("Discoverable mode disabled after successful pairing")
+
+        except Exception as e:
+            logger.error(f"Failed to disable discoverable mode: {e}")
 
 
 def main():
