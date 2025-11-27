@@ -109,30 +109,27 @@ def get_volume():
         except Exception as e:
             logger.debug(f"Could not get volume from BlueALSA control: {e}")
 
-    # Fallback to hardware controls
-    controls = ['Master', 'PCM', 'Speaker', 'Headphone']
-    for control in controls:
-        try:
-            result = subprocess.run(
-                ['amixer', 'sget', control],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode == 0:
-                # Parse volume from amixer output
-                for line in result.stdout.split('\n'):
-                    if 'Playback' in line and '%' in line:
-                        # Extract percentage
-                        start = line.find('[') + 1
-                        end = line.find('%]')
-                        if start > 0 and end > 0:
-                            volume = int(line[start:end])
-                            logger.debug(f"Got volume {volume}% from {control}")
-                            return volume
-        except Exception as e:
-            logger.debug(f"Could not get volume from {control}: {e}")
-            continue
+    # Use hardware PCM control on card 0 (Headphones/3.5mm jack)
+    try:
+        result = subprocess.run(
+            ['amixer', '-c', '0', 'sget', 'PCM'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            # Parse volume from amixer output
+            for line in result.stdout.split('\n'):
+                if 'Playback' in line and '%' in line:
+                    # Extract percentage
+                    start = line.find('[') + 1
+                    end = line.find('%]')
+                    if start > 0 and end > 0:
+                        volume = int(line[start:end])
+                        logger.info(f"Got volume {volume}% from card 0 PCM")
+                        return volume
+    except Exception as e:
+        logger.error(f"Could not get volume from card 0 PCM: {e}")
 
     logger.warning("Could not get volume from any mixer control")
     return 50  # Default
@@ -156,29 +153,21 @@ def set_volume(level):
         except Exception as e:
             logger.debug(f"Could not set volume on BlueALSA control: {e}")
 
-    # Fallback to hardware controls
-    controls = ['Master', 'PCM', 'Speaker', 'Headphone']
-    success = False
-    for control in controls:
-        try:
-            result = subprocess.run(
-                ['amixer', 'sset', control, f'{level}%'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode == 0:
-                logger.info(f"Set volume to {level}% on {control}")
-                success = True
-                # Don't break - set volume on all available controls
-        except Exception as e:
-            logger.debug(f"Could not set volume on {control}: {e}")
-            continue
+    # Use hardware PCM control on card 0 (Headphones/3.5mm jack)
+    try:
+        result = subprocess.run(
+            ['amixer', '-c', '0', 'sset', 'PCM', f'{level}%'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            logger.info(f"Set volume to {level}% on card 0 PCM")
+            return True
+    except Exception as e:
+        logger.error(f"Could not set volume on card 0 PCM: {e}")
 
-    if not success:
-        logger.error("Could not set volume on any mixer control")
-
-    return success
+    return False
 
 
 # Routes
