@@ -63,7 +63,6 @@ apt-get install -y \
 # Audio packages
 apt-get install -y \
     alsa-utils \
-    alsa-base \
     libasound2-dev
 
 # WiFi AP packages
