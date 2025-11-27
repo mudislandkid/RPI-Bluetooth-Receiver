@@ -178,6 +178,18 @@ id -u bluealsa &>/dev/null || useradd -r -s /bin/false bluealsa
 # Add bluealsa user to audio group
 usermod -a -G audio bluealsa
 
+# Create BlueALSA state directory
+log_info "Creating BlueALSA state directory..."
+mkdir -p /var/lib/bluealsa
+chown bluealsa:bluealsa /var/lib/bluealsa
+chmod 755 /var/lib/bluealsa
+
+# Install D-Bus policy for BlueALSA
+log_info "Installing D-Bus policy for BlueALSA..."
+cp "$PROJECT_DIR/config/bluealsa-dbus.conf" /etc/dbus-1/system.d/
+# Reload D-Bus configuration
+systemctl reload dbus 2>/dev/null || systemctl restart dbus
+
 log_info "BlueALSA built and installed successfully"
 
 # Return to original directory
