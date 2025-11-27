@@ -70,11 +70,14 @@ apt-get install -y \
     hostapd \
     dnsmasq
 
-# Python packages
+# Python packages and development libraries
 apt-get install -y \
     python3-pip \
     python3-venv \
-    python3-full
+    python3-full \
+    libcairo2-dev \
+    libgirepository1.0-dev \
+    gir1.2-glib-2.0
 
 # Network tools
 apt-get install -y \
