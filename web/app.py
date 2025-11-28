@@ -26,8 +26,8 @@ CORS(app)
 # Initialize Bluetooth manager
 bt_manager = BluetoothManager()
 
-# Initialize USB music player
-usb_music_player = usb_player.USBMusicPlayer()
+# Initialize local music player
+usb_music_player = usb_player.LocalMusicPlayer()
 
 
 # Helper functions
