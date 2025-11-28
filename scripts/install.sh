@@ -487,7 +487,12 @@ chmod 755 /media/usb
 mkdir -p /var/lib/bluetooth-receiver
 chmod 755 /var/lib/bluetooth-receiver
 
-log_info "USB music player installed"
+# Create music directory for local playback
+mkdir -p /var/music
+chmod 777 /var/music  # Allow all users to add music
+chown pi:pi /var/music 2>/dev/null || chown 1000:1000 /var/music
+
+log_info "Music player installed (music directory: /var/music)"
 
 ###############################################################################
 # Step 7: Install Systemd Services

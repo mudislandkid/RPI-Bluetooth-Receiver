@@ -1,14 +1,12 @@
 [Unit]
-Description=USB Music Player
-After=network.target sound.target local-fs.target
+Description=Local Music Player
+After=network.target sound.target
 Wants=sound.target
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/opt/bluetooth-receiver
-# Give USB devices time to settle during boot
-ExecStartPre=/bin/sleep 5
 ExecStart=/opt/bluetooth-receiver/venv/bin/python /opt/bluetooth-receiver/usb_player.py
 Restart=always
 RestartSec=5

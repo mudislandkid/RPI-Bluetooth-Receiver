@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-USB Music Player for RPI Bluetooth Audio Receiver
-Automatically plays music from USB drives when inserted
+Local Music Player for RPI Bluetooth Audio Receiver
+Plays music from local SD card storage
 """
 
 import os
@@ -11,25 +11,26 @@ import threading
 import logging
 from pathlib import Path
 import json
+import random
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger('USBPlayer')
+logger = logging.getLogger('MusicPlayer')
 
 # Supported audio formats
 AUDIO_EXTENSIONS = {'.mp3', '.flac', '.wav', '.m4a', '.aac', '.ogg', '.opus', '.wma'}
 
-# USB mount point
-USB_MOUNT_BASE = '/media/usb'
+# Local music directory
+MUSIC_DIR = '/var/music'
 
 # State file
-STATE_FILE = '/var/lib/bluetooth-receiver/usb_player_state.json'
+STATE_FILE = '/var/lib/bluetooth-receiver/music_player_state.json'
 
 
-class USBMusicPlayer:
-    """Manages USB music playback"""
+class LocalMusicPlayer:
+    """Manages local music playback from SD card"""
 
     def __init__(self):
         self.current_process = None
@@ -37,26 +38,33 @@ class USBMusicPlayer:
         self.current_index = 0
         self.is_playing = False
         self.is_paused = False
-        self.usb_mounted = False
-        self.current_usb_path = None
+        self.shuffle = False
         self.loop = True
         self.lock = threading.Lock()
 
-        # Ensure state directory exists
+        # Ensure state and music directories exist
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+        os.makedirs(MUSIC_DIR, exist_ok=True)
 
-        logger.info("USB Music Player initialized")
+        # Load music library on startup
+        self.scan_music_library()
 
-    def scan_usb_for_music(self, mount_point):
-        """Scan USB drive for music files"""
-        logger.info(f"Scanning {mount_point} for music files...")
+        logger.info(f"Local Music Player initialized with {len(self.playlist)} tracks")
+
+    def scan_music_library(self):
+        """Scan local music directory for audio files"""
+        logger.info(f"Scanning {MUSIC_DIR} for music files...")
         music_files = []
 
         try:
-            for root, dirs, files in os.walk(mount_point):
+            if not os.path.exists(MUSIC_DIR):
+                logger.warning(f"Music directory {MUSIC_DIR} does not exist")
+                return []
+
+            for root, dirs, files in os.walk(MUSIC_DIR):
                 for file in files:
-                    # Skip Mac resource fork files and hidden files
-                    if file.startswith('._') or file.startswith('.'):
+                    # Skip hidden files and Mac resource forks
+                    if file.startswith('.') or file.startswith('._'):
                         continue
                     if Path(file).suffix.lower() in AUDIO_EXTENSIONS:
                         full_path = os.path.join(root, file)
@@ -65,38 +73,34 @@ class USBMusicPlayer:
             # Sort files alphabetically (case-insensitive)
             music_files.sort(key=lambda x: x.lower())
 
+            self.playlist = music_files
             logger.info(f"Found {len(music_files)} music files")
             return music_files
         except Exception as e:
-            logger.error(f"Error scanning USB: {e}")
+            logger.error(f"Error scanning music library: {e}")
             return []
 
-    def find_usb_mount(self):
-        """Find mounted USB drive"""
-        # Check common mount points
-        mount_points = [
-            '/media/usb',
-            '/media/usb0',
-            '/mnt/usb',
-            '/media/pi',
-        ]
-
-        # Also check /media for any mounted drives
-        if os.path.exists('/media'):
-            try:
-                for item in os.listdir('/media'):
-                    full_path = os.path.join('/media', item)
-                    if os.path.ismount(full_path):
-                        mount_points.append(full_path)
-            except:
-                pass
-
-        for mp in mount_points:
-            if os.path.exists(mp) and os.path.ismount(mp):
-                logger.info(f"Found USB mount at: {mp}")
-                return mp
-
-        return None
+    def toggle_shuffle(self):
+        """Toggle shuffle mode"""
+        with self.lock:
+            self.shuffle = not self.shuffle
+            if self.shuffle:
+                # Save current track
+                current_track = self.playlist[self.current_index] if self.current_index < len(self.playlist) else None
+                # Shuffle playlist
+                random.shuffle(self.playlist)
+                # Find current track in shuffled playlist
+                if current_track:
+                    try:
+                        self.current_index = self.playlist.index(current_track)
+                    except ValueError:
+                        self.current_index = 0
+                logger.info("Shuffle enabled")
+            else:
+                # Restore alphabetical order
+                self.scan_music_library()
+                logger.info("Shuffle disabled")
+            return self.shuffle
 
     def play_file(self, file_path):
         """Play a single audio file using mpg123 or similar"""
@@ -167,29 +171,18 @@ class USBMusicPlayer:
 
         logger.info("Playback loop ended")
 
-    def start_playback(self, mount_point=None):
-        """Start USB music playback"""
+    def start_playback(self):
+        """Start music playback"""
         with self.lock:
             if self.is_playing:
                 logger.warning("Already playing")
                 return False
 
-            # Find USB mount if not provided
-            if mount_point is None:
-                mount_point = self.find_usb_mount()
-
-            if not mount_point:
-                logger.error("No USB drive found")
-                return False
-
-            self.current_usb_path = mount_point
-            self.usb_mounted = True
-
-            # Scan for music files
-            self.playlist = self.scan_usb_for_music(mount_point)
+            # Rescan music library
+            self.scan_music_library()
 
             if not self.playlist:
-                logger.warning("No music files found on USB")
+                logger.warning("No music files found in library")
                 return False
 
             self.current_index = 0
@@ -292,10 +285,10 @@ class USBMusicPlayer:
             return {
                 'is_playing': self.is_playing,
                 'is_paused': self.is_paused,
-                'usb_mounted': self.usb_mounted,
                 'current_file': current_file,
                 'current_index': self.current_index,
                 'total_tracks': len(self.playlist),
+                'shuffle': self.shuffle,
                 'loop': self.loop
             }
 
@@ -308,30 +301,15 @@ def main():
     """Main function"""
     global player
 
-    player = USBMusicPlayer()
+    player = LocalMusicPlayer()
 
-    # Monitor for USB insertion
-    logger.info("Monitoring for USB drives...")
-
-    last_check_time = 0
-    check_interval = 5  # Check every 5 seconds
+    # Simple event loop to keep the service running
+    logger.info("Local music player service started")
+    logger.info(f"Music directory: {MUSIC_DIR}")
+    logger.info(f"Loaded {len(player.playlist)} tracks")
 
     try:
         while True:
-            current_time = time.time()
-
-            if current_time - last_check_time >= check_interval:
-                last_check_time = current_time
-
-                usb_mount = player.find_usb_mount()
-
-                if usb_mount and not player.is_playing:
-                    logger.info(f"USB drive detected at {usb_mount}, starting playback")
-                    player.start_playback(usb_mount)
-                elif not usb_mount and player.is_playing:
-                    logger.info("USB drive removed, stopping playback")
-                    player.stop_playback()
-
             time.sleep(1)
 
     except KeyboardInterrupt:
