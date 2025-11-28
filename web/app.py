@@ -439,6 +439,21 @@ def usb_previous():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/usb/shuffle', methods=['POST'])
+def usb_shuffle():
+    """Toggle shuffle mode"""
+    try:
+        shuffle_enabled = usb_music_player.toggle_shuffle()
+        return jsonify({
+            'success': True,
+            'shuffle': shuffle_enabled,
+            'message': f"Shuffle {'enabled' if shuffle_enabled else 'disabled'}"
+        })
+    except Exception as e:
+        logger.error(f"Error toggling shuffle: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 ###############################################################################
 # Error Handlers
 ###############################################################################
