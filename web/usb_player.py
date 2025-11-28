@@ -149,6 +149,10 @@ class LocalMusicPlayer:
                 if self.current_index >= len(self.playlist):
                     if self.loop:
                         logger.info("Reached end of playlist, looping...")
+                        # Reshuffle if shuffle mode is enabled
+                        if self.shuffle:
+                            random.shuffle(self.playlist)
+                            logger.info("Playlist reshuffled for next loop")
                         self.current_index = 0
                     else:
                         logger.info("Reached end of playlist, stopping")
@@ -184,6 +188,11 @@ class LocalMusicPlayer:
             if not self.playlist:
                 logger.warning("No music files found in library")
                 return False
+
+            # Apply shuffle if enabled
+            if self.shuffle:
+                random.shuffle(self.playlist)
+                logger.info("Playlist shuffled for playback")
 
             self.current_index = 0
             self.is_playing = True
