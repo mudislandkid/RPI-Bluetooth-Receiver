@@ -12,7 +12,7 @@ const volumeSlider = document.getElementById('volume-slider');
 const volumeValue = document.getElementById('volume-value');
 const devicesList = document.getElementById('devices-list');
 
-// USB Player Elements
+// Music Player Elements
 const usbStatusValue = document.getElementById('usb-status-value');
 const usbTrackName = document.getElementById('usb-track-name');
 const usbTrackNumber = document.getElementById('usb-track-number');
@@ -20,6 +20,7 @@ const usbPlayBtn = document.getElementById('usb-play-btn');
 const usbStopBtn = document.getElementById('usb-stop-btn');
 const usbNextBtn = document.getElementById('usb-next-btn');
 const usbPrevBtn = document.getElementById('usb-prev-btn');
+const usbShuffleBtn = document.getElementById('usb-shuffle-btn');
 const usbControls = document.getElementById('usb-controls');
 const usbCurrentTrack = document.getElementById('usb-current-track');
 const usbTrackInfo = document.getElementById('usb-track-info');
@@ -65,11 +66,12 @@ function setupEventListeners() {
         }, 300);
     });
 
-    // USB Player controls
+    // Music Player controls
     usbPlayBtn.addEventListener('click', playUSB);
     usbStopBtn.addEventListener('click', stopUSB);
     usbNextBtn.addEventListener('click', nextUSBTrack);
     usbPrevBtn.addEventListener('click', prevUSBTrack);
+    usbShuffleBtn.addEventListener('click', toggleShuffle);
 }
 
 // API Functions
@@ -296,15 +298,26 @@ async function loadUSBStatus() {
 }
 
 function updateUSBUI(data) {
-    // Update USB status
-    if (data.usb_mounted) {
-        usbStatusValue.textContent = 'USB Detected';
+    // Update music library status
+    if (data.total_tracks > 0) {
+        usbStatusValue.textContent = `${data.total_tracks} track${data.total_tracks !== 1 ? 's' : ''}`;
         usbStatusValue.className = 'status-value connected';
-        usbPlayBtn.disabled = !data.is_playing;
+        usbPlayBtn.disabled = data.is_playing;
+        usbShuffleBtn.disabled = false;
     } else {
-        usbStatusValue.textContent = 'Not Detected';
+        usbStatusValue.textContent = 'No music files';
         usbStatusValue.className = 'status-value disconnected';
         usbPlayBtn.disabled = true;
+        usbShuffleBtn.disabled = true;
+    }
+
+    // Update shuffle button state
+    if (data.shuffle) {
+        usbShuffleBtn.className = 'btn btn-success';
+        usbShuffleBtn.textContent = '🔀 Shuffle: ON';
+    } else {
+        usbShuffleBtn.className = 'btn btn-secondary';
+        usbShuffleBtn.textContent = '🔀 Shuffle';
     }
 
     // Update playback info
@@ -333,13 +346,13 @@ async function playUSB() {
         const data = await response.json();
 
         if (data.success) {
-            showSuccess('USB playback started');
+            showSuccess('Music playback started');
             loadUSBStatus();
         } else {
-            showError(data.error || 'Failed to start USB playback');
+            showError(data.error || 'Failed to start music playback');
         }
     } catch (error) {
-        showError('Error starting USB playback: ' + error.message);
+        showError('Error starting music playback: ' + error.message);
     }
 }
 
@@ -352,13 +365,32 @@ async function stopUSB() {
         const data = await response.json();
 
         if (data.success) {
-            showSuccess('USB playback stopped');
+            showSuccess('Music playback stopped');
             loadUSBStatus();
         } else {
-            showError(data.error || 'Failed to stop USB playback');
+            showError(data.error || 'Failed to stop music playback');
         }
     } catch (error) {
-        showError('Error stopping USB playback: ' + error.message);
+        showError('Error stopping music playback: ' + error.message);
+    }
+}
+
+async function toggleShuffle() {
+    try {
+        const response = await fetch(`${API_BASE}/api/usb/shuffle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showSuccess(data.message);
+            loadUSBStatus();
+        } else {
+            showError(data.error || 'Failed to toggle shuffle');
+        }
+    } catch (error) {
+        showError('Error toggling shuffle: ' + error.message);
     }
 }
 

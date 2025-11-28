@@ -62,12 +62,12 @@
             </div>
         </section>
 
-        <!-- USB Music Player Section -->
+        <!-- Local Music Player Section -->
         <section class="card usb-player-card">
-            <h2>USB Music Player</h2>
+            <h2>Local Music Player</h2>
             <div id="usb-status" class="status-item">
-                <span class="status-label">USB Status:</span>
-                <span id="usb-status-value" class="status-value">Not Detected</span>
+                <span class="status-label">Library:</span>
+                <span id="usb-status-value" class="status-value">Loading...</span>
             </div>
             <div id="usb-current-track" class="status-item" style="display: none;">
                 <span class="status-label">Now Playing:</span>
@@ -84,10 +84,13 @@
             </div>
             <div class="control-group" id="usb-play-group">
                 <button id="usb-play-btn" class="btn btn-primary" disabled>
-                    ▶ Play USB Music
+                    ▶ Play Music
+                </button>
+                <button id="usb-shuffle-btn" class="btn btn-secondary" disabled>
+                    🔀 Shuffle
                 </button>
             </div>
-            <p class="usb-hint">Insert a USB drive with music files to enable playback</p>
+            <p class="usb-hint">Music directory: /var/music</p>
         </section>
 
         <!-- Paired Devices Section -->
